@@ -2980,6 +2980,41 @@ async def test_send_text_bad_request_plain_fallback_exhausted() -> None:
 # _markdown_to_telegram_html formatting tests
 # ---------------------------------------------------------------------------
 
+@pytest.mark.asyncio
+@pytest.mark.parametrize("placeholder", ["-", "---"])
+@pytest.mark.parametrize("headers", [("Before", "After"), ("-", "-")])
+async def test_send_preserves_separator_like_table_data(
+    placeholder: str, headers: tuple[str, str],
+) -> None:
+    markdown = (
+        f"| {headers[0]} | {headers[1]} |\n"
+        "| --- | --- |\n"
+        f"| {placeholder} | {placeholder} |\n"
+        "| 10 | 20 |"
+    )
+
+    channel = TelegramChannel(
+        TelegramConfig(enabled=True, token="123:abc", allow_from=["*"]),
+        MessageBus(),
+    )
+    _install_ready_app(channel)
+    await channel.send(OutboundMessage(
+        channel="telegram", chat_id="123", content=markdown,
+    ))
+
+    assert len(channel._app.bot.sent_messages) == 1
+    sent = channel._app.bot.sent_messages[0]
+    assert sent["parse_mode"] == "HTML"
+    html = sent["text"]
+    assert html.startswith("<pre><code>")
+    body = html.removeprefix("<pre><code>").removesuffix("</code></pre>")
+    assert body.splitlines()[0].split() == list(headers)
+    assert [line.split() for line in body.splitlines()[2:]] == [
+        [placeholder, placeholder],
+        ["10", "20"],
+    ]
+
+
 def test_markdown_to_html_headers_become_bold() -> None:
     from nanobot.channels.telegram.runtime import _markdown_to_telegram_html
 

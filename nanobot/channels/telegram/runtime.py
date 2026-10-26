@@ -308,9 +308,9 @@ def _render_table_box(table_lines: list[str]) -> str:
 
     rows: list[list[str]] = []
     has_sep = False
-    for line in table_lines:
+    for index, line in enumerate(table_lines):
         cells = [_strip_md(c) for c in line.strip().strip('|').split('|')]
-        if all(re.match(r'^:?-+:?$', c) for c in cells if c):
+        if index == 1 and all(re.match(r'^:?-+:?$', c) for c in cells if c):
             has_sep = True
             continue
         rows.append(cells)
